@@ -132,7 +132,6 @@ export async function runScriptedSimulation(opts: {
   // 3) QA evaluates → fails
   setStatus(setNodes, "n-qa", "running");
   addLog({ nodeId: "n-qa", nodeLabel: "Brand QA", status: "started", message: "Node initialized." });
-  await wait: 1200 ? null : null; // placeholder removed below
   await wait(1200);
   failAttempt(setNodes, "n-qa", {
     explanation: "Headline scored 0.42 against brand voice (threshold 0.80). Triggering self-correction.",
