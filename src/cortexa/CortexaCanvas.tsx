@@ -109,9 +109,9 @@ function CortexaCanvasInner() {
   }, [running, setNodes, setEdges]);
 
   return (
-    <div className="flex h-screen w-full flex-col bg-background text-foreground">
+    <div className="flex h-screen w-full min-w-0 flex-col bg-background text-foreground">
       {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
+      <header className="flex min-h-14 shrink-0 flex-col gap-2 border-b border-border bg-surface px-4 py-2 sm:h-14 sm:flex-row sm:items-center sm:justify-between sm:py-0">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-primary">
             <Activity className="h-4 w-4 text-primary-foreground" />
@@ -126,7 +126,7 @@ function CortexaCanvasInner() {
             workflow / launch-campaign-v3
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <Button variant="outline" size="sm" className="gap-1.5" disabled={running}>
             <Brain className="h-3.5 w-3.5 text-accent" />
             Memory
@@ -151,7 +151,7 @@ function CortexaCanvasInner() {
       <div className="flex flex-1 overflow-hidden">
         <NodePalette />
 
-        <div ref={wrapperRef} className="canvas-grid relative flex-1" onDrop={onDrop} onDragOver={onDragOver}>
+        <div ref={wrapperRef} className="canvas-grid relative min-w-0 flex-1" onDrop={onDrop} onDragOver={onDragOver}>
           <ReactFlow
             nodes={nodes}
             edges={edges}

@@ -49,7 +49,7 @@ export function InspectorPanel({ node, onConfigChange }: Props) {
 
   if (!node) {
     return (
-      <aside className="flex h-full w-[360px] shrink-0 flex-col items-center justify-center border-l border-border bg-surface px-6 text-center">
+      <aside className="hidden h-full w-[360px] shrink-0 flex-col items-center justify-center border-l border-border bg-surface px-6 text-center lg:flex">
         <div className="rounded-full border border-border bg-surface-elevated p-3">
           <Sparkles className="h-5 w-5 text-primary" />
         </div>
@@ -68,7 +68,7 @@ export function InspectorPanel({ node, onConfigChange }: Props) {
   const attempt = attempts.find((a) => a.attempt === activeAttemptNum) ?? attempts[attempts.length - 1];
 
   return (
-    <aside className="flex h-full w-[360px] shrink-0 flex-col border-l border-border bg-surface">
+    <aside className="hidden h-full w-[360px] shrink-0 flex-col border-l border-border bg-surface lg:flex">
       {/* Header */}
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2.5">

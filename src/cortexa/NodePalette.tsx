@@ -40,7 +40,7 @@ function PaletteCard({ entry }: { entry: PaletteEntry }) {
 
 export function NodePalette() {
   return (
-    <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-border bg-surface">
+    <aside className="hidden h-full w-[260px] shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="border-b border-border px-4 py-3">
         <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Node Registry
