@@ -65,3 +65,8 @@ apps/ppt-worker/scratch/
 check_runs.js
 trigger_*.js
 create_bucket.py
+
+# ── other-project docs (demo inputs, not Cortexa) ──
+README_FACEVAULT.txt
+README_GRIEVANCE.txt
+support_ticket_README.md
