@@ -138,6 +138,21 @@ Autonomous chat-agent loops are opaque and non-deterministic. A DAG gives:
 
 ---
 
+## 🧰 Tech Stack
+
+| Layer | Stack |
+|---|---|
+| **Frontend** | React 18.3 · Vite 5.4 · TypeScript 5.8 · React Flow 11.11 · TailwindCSS 3.4 + shadcn/ui (Radix) · TanStack Query 5 · React Router 6.30 · Recharts 2.15 · cmdk 1.1 · sonner 1.7 · react-hook-form 7 · Zod 3.25 · Vitest 3.2 |
+| **API Gateway** | NestJS 10.4 · Prisma 5.22 · BullMQ 5.51 · RxJS (SSE) · class-validator/transformer |
+| **Worker** | Node 20 · BullMQ 5 · ioredis 5 |
+| **Nodes pkg** | TypeScript · Zod 3.25 · axios 1.15 · ioredis 5 · sharp 0.34 · @aws-sdk/client-s3 · groq-sdk |
+| **PPT / Convert Worker** | Python 3.10+ · FastAPI · Uvicorn · python-pptx · PyMuPDF · pydantic · httpx · boto3 · python-multipart |
+| **Data / Infra** | PostgreSQL 15 · Redis 7 · LocalStack (S3) · Docker Compose |
+| **Monorepo / Tooling** | Turborepo 2.9 · pnpm 10.33 workspaces |
+| **AI Backend** | NVIDIA NIM (OpenAI-compatible) — Kimi-K2, Llama-3.3-70B, Llama-3.1-8B, Llama-Guard-4-12B, nv-embed-v1, nv-rerankqa-mistral-4b-v3, FLUX.1-dev; Web search: Tavily / DuckDuckGo |
+
+---
+
 ## 🧠 Model Architecture (NVIDIA NIM)
 
 - **Backbone:** NVIDIA NIM (`https://integrate.api.nvidia.com/v1`), OpenAI-compatible
