@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: cortexa_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cortexa
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: cortexa_redis
+    ports:
+      - "6385:6379"
+
+  localstack:
+    image: localstack/localstack:3.0.0
+    container_name: cortexa_localstack
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - ACTIVATE_PRO=0
+      - SKIP_PRO_ACTIVATION=1
+      - SKIP_SSL_CERT_DOWNLOAD=1
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+  ppt-worker:
+    build:
+      context: .
+      dockerfile: apps/ppt-worker/Dockerfile
+    container_name: cortexa_ppt_worker
+    environment:
+      - S3_ENDPOINT=http://localstack:4566
+      - S3_BUCKET=cortexa-exports
+      - PPT_TEMPLATE_PATH=/app/scratch/template.pptx
+      - NVIDIA_LLM_KEY=${NVIDIA_LLM_KEY}
+      - NVIDIA_IMAGE_KEY=${NVIDIA_IMAGE_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/ppt-worker:/app
+      - ./scratch:/app/scratch
+      - .:/cortexa_root
+    depends_on:
+      - localstack
+
+volumes:
+  postgres_data:
+  localstack_data:

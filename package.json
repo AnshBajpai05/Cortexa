@@ -1,0 +1,16 @@
+{
+  "name": "cortexa",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Agentic AI Deliverable Platform — local-first DAG orchestrator",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  }
+}

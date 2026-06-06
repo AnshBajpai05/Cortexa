@@ -1,0 +1,187 @@
+// ─── Prisma Schema ────────────────────────────────────────────────────────────
+// Cortexa — Agentic AI Deliverable Platform
+// Run `pnpm --filter @cortexa/api run prisma:migrate` to apply
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum RunStatus {
+  queued
+  running
+  completed
+  failed
+  skipped
+}
+
+enum AssetKind {
+  image
+  text
+  video
+}
+
+enum UserRole {
+  admin
+  member
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  role       UserRole   @default(member)
+  createdAt  DateTime   @default(now())
+
+  workspaces WorkspaceMember[]
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  members   WorkspaceMember[]
+  workflows Workflow[]
+  assets    Asset[]
+  ledger    CreditLedger[]
+}
+
+/// Junction table: User ↔ Workspace many-to-many
+model WorkspaceMember {
+  userId      String
+  workspaceId String
+  joinedAt    DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String   @default("Untitled Workflow")
+  workspaceId String
+  /// Serialized DAG — nodes[] + edges[] as JSON
+  jsonGraph   Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  runs           Run[]
+  memories       Memory[]
+  vectorMemories VectorMemory[]
+}
+
+model Run {
+  id         String    @id @default(cuid())
+  workflowId String
+  /// Which node within the workflow this run record tracks
+  nodeId     String
+  status     RunStatus @default(queued)
+
+  /// Inputs passed to the node (resolved from parent outputs)
+  inputsJson  Json?
+  /// Output produced by the node execution
+  outputsJson Json?
+  /// Error details if status = failed
+  errorJson   Json?
+
+  attempt       Int       @default(1)
+  previousRunId String?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  workflow Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  logs     RunLog[]
+  metrics  RunMetric[]
+}
+
+model RunLog {
+  id         String   @id @default(cuid())
+  runId      String
+  nodeId     String
+  status     String   // started, success, failed, retry, fallback
+  
+  inputJson  Json?
+  outputJson Json?
+  errorJson  Json?
+  
+  attempt    Int      @default(1)
+  
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+
+  run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model Memory {
+  id         String   @id @default(cuid())
+  workflowId String
+  type       String   // "context" | "history"
+  key        String
+  value      String
+
+  createdAt  DateTime @default(now())
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id          String     @id @default(cuid())
+  workspaceId String
+  kind        AssetKind
+  /// S3 / LocalStack URL of the binary asset
+  url         String
+  createdAt   DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+/// Credit ledger: seeded with large balance to bypass billing entirely
+model CreditLedger {
+  id          String    @id @default(cuid())
+  workspaceId String
+  /// Positive = credit, Negative = debit
+  delta       Int
+  reason      String
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+model VectorMemory {
+  id         String   @id @default(cuid())
+  workflowId String
+  text       String
+  /// Vector embeddings stored as Float[] (Postgres pgvector)
+  embedding  Float[]
+  metadata   Json?    @default("{}")
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+/// Execution metrics for observability & telemetry
+model RunMetric {
+  id           String   @id @default(cuid())
+  runId        String
+  nodeId       String
+  model        String?
+  latencyMs    Int
+  tokenCount   Int?     @default(0)
+  costEstimate Float?   @default(0)
+  attempt      Int      @default(1)
+  success      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+}

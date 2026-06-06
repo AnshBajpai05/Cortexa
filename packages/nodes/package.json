@@ -1,0 +1,26 @@
+{
+  "name": "@cortexa/nodes",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1037.0",
+    "axios": "^1.15.2",
+    "groq-sdk": "^1.1.2",
+    "ioredis": "^5.10.1",
+    "sharp": "^0.34.5",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/ioredis": "^5.0.0",
+    "@types/node": "^25.6.0",
+    "rimraf": "^5.0.7",
+    "typescript": "^5.4.5"
+  }
+}

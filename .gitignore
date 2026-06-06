@@ -1,0 +1,67 @@
+# ── deps ──
+node_modules
+**/node_modules/
+
+# ── builds ──
+.turbo
+dist
+**/dist/
+.next
+*.tsbuildinfo
+vite.config.ts.timestamp-*.mjs
+
+# ── secrets (NEVER commit) ──
+.env
+.env.*
+*.env
+*.env.local
+!.env.example
+nvidia_keys.txt
+
+# ── python ──
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ── generated media ──
+/*.png
+/poster-*.png
+apps/ppt-worker/presentation-*.pptx
+
+# ── scratch: ignore junk, keep load-bearing files ──
+scratch/*
+!scratch/template.pptx
+!scratch/seed.ts
+!scratch/seed.sql
+!scratch/assets/
+
+# ── os ──
+.DS_Store
+Thumbs.db
+
+# ── editors ──
+.idea/
+*.swp
+
+# ── logs / coverage / misc ──
+*.log
+npm-debug.log*
+coverage/
+.pnpm-debug.log*
+
+# ── extra secret guards (belt + suspenders) ──
+*.pem
+*.key
+secrets.*
+*credentials*.json
+
+# ── ad-hoc dev/test scripts (may contain hardcoded keys — not for publish) ──
+apps/api/scratch/
+apps/api/scratch_test_*.js
+apps/ppt-worker/test_*.py
+apps/ppt-worker/scratch/
+check_runs.js
+trigger_*.js
+create_bucket.py
