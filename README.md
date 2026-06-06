@@ -261,8 +261,14 @@ POST /api/agent/run
 
 ## ⚙️ Quick Start
 
+### Prerequisites
+- Node.js 20+ · pnpm 10+ · Docker (Compose) · Python 3.10+
+
 ### Setup
 ```bash
+git clone -b v1 https://github.com/AnshBajpai05/Cortexa.git
+cd Cortexa
+
 docker compose up -d                 # postgres, redis, localstack, ppt-worker
 pnpm install
 cp apps/api/.env.example apps/api/.env        # add real NVIDIA keys
@@ -298,6 +304,12 @@ curl -X POST http://localhost:3001/api/agent/run \
 ## 🔮 Vision
 
 To make **client-ready, grounded AI deliverables** buildable by anyone on free infrastructure — visual, safety-gated, and self-correcting by default.
+
+---
+
+## 📄 License
+
+MIT — see [`LICENSE`](LICENSE). Free to use, modify, and self-host.
 
 ---
 
