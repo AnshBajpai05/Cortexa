@@ -44,6 +44,15 @@ Status: ✅ done · 🔄 in progress · ⬜ pending · ⛔ blocked-on-user
 | T2-D1 Dynamic handoffs / conditional edges | ⬜ (after engine stable) |
 | T2-M1 Generic MCP client node | ⬜ |
 
+## Phase 2 — Eval harness (PROOF)
+
+| Item | Status | Notes |
+|---|---|---|
+| Golden suites (marketing/research/ppt, 10 each = 30) | ✅ | `eval/golden/*.json` — structural + content assertions |
+| Runner + scorecard | ✅ | `eval/runner.mjs`: dispatch→poll→terminal-output→assert; per-suite struct%/content%/avg_ms + JSON results |
+| **Structural proof (mock, no keys)** | ✅ **VERIFIED** | **30/30 pipelines struct% = 100%** across all 3 types, live this session (marketing 3.9s · ppt 3.8s · research 2.9s avg). Proves prompt→DAG→exec→completion end-to-end |
+| Content% + retry-recovery numbers | ⛔ user | Needs live NVIDIA keys → real quality scorecard |
+
 ## §11 Next-gen (after Tier-1)
 
 ⬜ Autopilot package: speak-a-brief · voice narration · autopilot mode · Telegram bot · debate template · scheduled pipelines

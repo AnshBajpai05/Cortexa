@@ -1,0 +1,16 @@
+{
+  "suite": "research",
+  "description": "Prompt → grounded, cited summary. Content assertions need live keys (+ web search for citations).",
+  "cases": [
+    { "id": "res-01", "prompt": "Summarize the key advantages of retrieval-augmented generation and cite sources.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 80 }, { "type": "content", "check": "hasCitation", "field": "text" }] },
+    { "id": "res-02", "prompt": "What are the latest NVIDIA NIM hosted models? Summarize with citations.", "assert": [{ "type": "content", "check": "hasCitation", "field": "text" }] },
+    { "id": "res-03", "prompt": "Explain vector databases and when to use them, with sources.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 80 }] },
+    { "id": "res-04", "prompt": "Summarize current best practices for LLM evaluation, cited.", "assert": [{ "type": "content", "check": "hasCitation", "field": "text" }] },
+    { "id": "res-05", "prompt": "What is the Model Context Protocol? Concise cited summary.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 60 }] },
+    { "id": "res-06", "prompt": "Compare DAG orchestration vs autonomous agent loops, with references.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 80 }] },
+    { "id": "res-07", "prompt": "Summarize approaches to prompt injection defense, cited.", "assert": [{ "type": "content", "check": "hasCitation", "field": "text" }] },
+    { "id": "res-08", "prompt": "Overview of pgvector for similarity search, with sources.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 60 }] },
+    { "id": "res-09", "prompt": "What are common RAG failure modes? Summarize with citations.", "assert": [{ "type": "content", "check": "hasCitation", "field": "text" }] },
+    { "id": "res-10", "prompt": "Summarize self-correction strategies in LLM pipelines, cited.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 80 }] }
+  ]
+}

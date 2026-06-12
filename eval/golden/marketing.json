@@ -1,0 +1,17 @@
+{
+  "suite": "marketing",
+  "description": "Brief → marketing copy (+ optional image). Content assertions need live keys.",
+  "template": "instagram-ad-engine",
+  "cases": [
+    { "id": "mkt-01", "prompt": "Write an Instagram ad for a premium cold-brew coffee brand targeting remote workers.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 40 }, { "type": "content", "check": "hasCTA", "field": "text" }] },
+    { "id": "mkt-02", "prompt": "Launch caption for an eco-friendly running shoe, energetic tone, under 30 words.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 20 }] },
+    { "id": "mkt-03", "prompt": "Ad copy for a B2B analytics SaaS, professional and benefit-led.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 40 }] },
+    { "id": "mkt-04", "prompt": "Punchy headline for a meal-prep delivery service.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 10 }] },
+    { "id": "mkt-05", "prompt": "Instagram caption for a luxury skincare serum with a clear call to action.", "assert": [{ "type": "content", "check": "hasCTA", "field": "text" }] },
+    { "id": "mkt-06", "prompt": "Promo copy for a weekend music festival, exciting and urgent.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 30 }] },
+    { "id": "mkt-07", "prompt": "Ad for a budgeting app aimed at college students.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 30 }] },
+    { "id": "mkt-08", "prompt": "Caption for an electric bike, emphasize freedom and zero emissions.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 30 }] },
+    { "id": "mkt-09", "prompt": "Short promotional line for an online photography course.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 10 }] },
+    { "id": "mkt-10", "prompt": "Ad copy for a productivity planner, calm and aspirational tone.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 30 }] }
+  ]
+}

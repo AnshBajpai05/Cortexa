@@ -1,0 +1,16 @@
+{
+  "suite": "ppt",
+  "description": "Brief/README → presentation JSON (→ PPTX). Structural: pipeline completes + slides present. Slide render to .pptx needs live keys + ppt-worker.",
+  "cases": [
+    { "id": "ppt-01", "prompt": "Create a 6-slide pitch deck outline about agentic AI orchestration.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-02", "prompt": "Outline a presentation on RAG pipelines for a technical audience.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-03", "prompt": "Make a slide deck about the benefits of self-hosted AI infrastructure.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-04", "prompt": "Pitch deck for a developer-tools startup, 7 slides.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-05", "prompt": "Presentation outline: state of LLM evaluation in 2026.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-06", "prompt": "Deck about vector databases for engineering leaders.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-07", "prompt": "Slides explaining the Model Context Protocol to non-experts.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 80 }] },
+    { "id": "ppt-08", "prompt": "Pitch deck for a climate-tech analytics platform.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-09", "prompt": "Presentation: how DAG-based orchestration improves reproducibility.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 100 }] },
+    { "id": "ppt-10", "prompt": "Outline a 5-slide investor update for an AI deliverables company.", "assert": [{ "type": "content", "check": "minLength", "field": "text", "value": 80 }] }
+  ]
+}

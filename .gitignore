@@ -74,3 +74,6 @@ support_ticket_README.md
 # ── internal audit (documents key locations; publish only after rotation) ──
 take_step_forward.md
 Frontend/bun.lockb
+
+# eval run artifacts (timestamped, churny)
+eval/results/
