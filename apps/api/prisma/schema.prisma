@@ -84,6 +84,10 @@ model Workflow {
 model Run {
   id         String    @id @default(cuid())
   workflowId String
+  /// Execution generation — groups all runs created by one trigger.
+  /// Prevents cross-trigger state pollution (poll counts, stale parent
+  /// outputs, ambiguous child resolution). "legacy" = pre-migration rows.
+  executionId String   @default("legacy")
   /// Which node within the workflow this run record tracks
   nodeId     String
   status     RunStatus @default(queued)
@@ -105,6 +109,9 @@ model Run {
   workflow Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   logs     RunLog[]
   metrics  RunMetric[]
+
+  @@index([workflowId, executionId, nodeId, status])
+  @@index([workflowId, executionId, createdAt])
 }
 
 model RunLog {

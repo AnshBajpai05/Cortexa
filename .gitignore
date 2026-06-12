@@ -70,3 +70,6 @@ create_bucket.py
 README_FACEVAULT.txt
 README_GRIEVANCE.txt
 support_ticket_README.md
+
+# ── internal audit (documents key locations; publish only after rotation) ──
+take_step_forward.md

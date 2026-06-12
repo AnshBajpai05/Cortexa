@@ -187,11 +187,27 @@ const worker = new Worker(
 
       await pushLog(runId, nodeId, 'failed', { errorJson: parsedError || { message: error.message, stack: error.stack } });
 
+      // T1-1 ORDERING FIX: report 'failed' FIRST so the API's propagateFailure
+      // marks old queued descendants as skipped BEFORE retry-backward creates
+      // fresh queued replacement runs. (Previous order let propagation kill the
+      // very runs the self-correction loop had just re-queued.)
+      await fetch(`${API_URL}/internal/runs/${runId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-secret': WEBHOOK_SECRET,
+        },
+        body: JSON.stringify({
+          status: 'failed',
+          errorJson: { message: error.message, stack: error.stack },
+        }),
+      });
+
       // Self-Correction Loop Phase 3: trigger backward retry if QA, Safety, or Grounding failed
       if (parsedError && (parsedError.type === "QA_FAILED" || parsedError.type === "SAFETY_BLOCKED" || parsedError.type === "UNGROUNDED_EXECUTION")) {
         const loopType = parsedError.type;
         console.log(`   [${loopType}] Initiating guided self-correction loop for Run: ${runId}`);
-        
+
         // Build actionable, guided feedback instead of a dumb "retry"
         let guidedFeedback: string[];
         if (parsedError.type === "UNGROUNDED_EXECUTION") {
@@ -223,18 +239,6 @@ const worker = new Worker(
         });
       }
 
-      await fetch(`${API_URL}/internal/runs/${runId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-secret': WEBHOOK_SECRET,
-        },
-        body: JSON.stringify({
-          status: 'failed',
-          errorJson: { message: error.message, stack: error.stack },
-        }),
-      });
-
       throw error;
     }
   },
@@ -243,6 +247,8 @@ const worker = new Worker(
       host: REDIS_HOST,
       port: REDIS_PORT,
     },
+    // T1-3: parallel branches actually run in parallel (was default 1 = serial DAG)
+    concurrency: Number(process.env.WORKER_CONCURRENCY || 4),
     lockDuration: 600000, // 10 minutes for heavy 70B reasoning tasks
   }
 );
