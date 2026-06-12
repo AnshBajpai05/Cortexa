@@ -28,6 +28,9 @@ jobs:
       - name: Typecheck worker
         run: npx tsc --noEmit
         working-directory: apps/worker
+      - name: Engine regression tests (no infra)
+        run: node test/engine.test.mjs
+        working-directory: packages/nodes
 
   frontend:
     name: Frontend (tsc + vite build)

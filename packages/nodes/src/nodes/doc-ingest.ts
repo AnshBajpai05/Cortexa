@@ -21,6 +21,37 @@ function looksLikeUrl(s: string): boolean {
   return /^https?:\/\/\S+$/i.test(s.trim());
 }
 
+/**
+ * T1-9 SSRF guard: reject URLs whose host resolves to loopback, link-local,
+ * cloud-metadata, or RFC-1918 private ranges. Literal-host blocklist (no DNS
+ * lookup) — covers the common attack surface for a v1 local-first tool.
+ */
+function assertSafeUrl(rawUrl: string): void {
+  let host: string;
+  try {
+    host = new URL(rawUrl.trim()).hostname.toLowerCase();
+  } catch {
+    throw new Error(`[docIngestNode] Invalid URL: ${rawUrl}`);
+  }
+  const h = host.replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+  const blocked =
+    h === "localhost" ||
+    h === "0.0.0.0" ||
+    h === "::1" ||
+    h === "169.254.169.254" || // cloud metadata
+    h.endsWith(".localhost") ||
+    h.endsWith(".internal") ||
+    /^127\./.test(h) ||
+    /^10\./.test(h) ||
+    /^192\.168\./.test(h) ||
+    /^169\.254\./.test(h) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(h) ||
+    /^(fc|fd|fe80)/.test(h); // IPv6 ULA / link-local
+  if (blocked) {
+    throw new Error(`[docIngestNode] Blocked SSRF target: ${host}`);
+  }
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -104,6 +135,7 @@ export const docIngestNode: NodeManifest = {
     let origin = "text";
     if (isUrl) {
       origin = source.trim();
+      assertSafeUrl(origin); // T1-9 SSRF guard
       try {
         const { data } = await axios.get<string>(source.trim(), {
           timeout: 20_000,

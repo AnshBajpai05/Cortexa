@@ -8,7 +8,8 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "test": "pnpm --filter @cortexa/nodes build && node packages/nodes/test/engine.test.mjs"
   },
   "devDependencies": {
     "turbo": "latest"

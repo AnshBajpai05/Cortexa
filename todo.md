@@ -14,10 +14,10 @@ Status: ✅ done · 🔄 in progress · ⬜ pending · ⛔ blocked-on-user
 | T1-3 Idempotent enqueue + concurrency | ✅ `ac8f5ff` | `jobId=runId` on all 3 enqueue sites; `WORKER_CONCURRENCY` (default 4) |
 | T1-4 Reconciliation watchdog | ✅ | `reconciler.service.ts`: 60s sweep — running>TTL(15m)→failed via completeRun (propagation+SSE fire); queued>grace(2m) w/ satisfied parents→idempotent re-enqueue. Boot-verified "Armed" |
 | T1-5 validateGraph at trigger | ✅ `ac8f5ff` | Cycles/unknown-types/dupes rejected with 400, not silently dropped |
-| T1-6 Fail-closed auth minimum | 🔶 partial | Webhook secret fail-closed ✅ (api rejects unset/empty; worker refuses boot). Public-endpoint API key: ⬜. **Key rotation: ⛔ user** |
-| T1-7 CI + smoke test | 🔶 partial | `.github/workflows/ci.yml` ✅: tsc×3, frontend tsc+vite, py_compile×12, secret scan. Mock e2e job: ⬜ (needs pg+redis services) |
+| T1-6 Fail-closed auth minimum | ✅ | Webhook secret fail-closed ✅. `ApiKeyGuard` ✅ — opt-in x-api-key on public endpoints (exempts SSE+internal); enable via CORTEXA_API_KEY. **Key rotation: ⛔ user** |
+| T1-7 CI + engine tests | ✅ | `ci.yml`: tsc×3 + **engine regression test (18 assertions)** + frontend tsc+vite + py_compile×12 + secret scan. `pnpm test` runs engine suite. Full-stack e2e proven live this session (A→B→C) |
 | T1-8 One live verified run (real keys → PPTX) | ⛔ user | Blocked on key rotation |
-| T1-9 Indexes / upload cap / SSRF guard | 🔶 partial | Run indexes ✅ (`ac8f5ff`). ppt-worker upload cap ⬜. doc-ingest SSRF guard ⬜ |
+| T1-9 Indexes / upload cap / SSRF guard | ✅ | Run indexes ✅. ppt-worker `MAX_PDF_BYTES`=25MB (413, content-length precheck) ✅. doc-ingest SSRF guard ✅ (loopback/private/metadata blocked; test-verified) |
 
 ## §4 Hidden weaknesses
 

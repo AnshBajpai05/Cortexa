@@ -1,7 +1,10 @@
 import os
 import uuid
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+# T1-9: cap PDF upload size to prevent memory-exhaustion DoS ("10GB PDF meme")
+MAX_PDF_BYTES = int(os.getenv("MAX_PDF_BYTES", str(25 * 1024 * 1024)))  # 25 MB
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import boto3
@@ -26,13 +29,19 @@ app.add_middleware(
 
 
 @app.post("/convert/pdf")
-async def convert_pdf(file: UploadFile = File(...)):
+async def convert_pdf(request: Request, file: UploadFile = File(...)):
     """Upload a PDF → clean markdown (digital path). Feeds the Document Ingest node."""
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only .pdf files are supported")
+    # Early reject via Content-Length before buffering the body
+    clen = request.headers.get("content-length")
+    if clen and clen.isdigit() and int(clen) > MAX_PDF_BYTES:
+        raise HTTPException(status_code=413, detail=f"PDF exceeds {MAX_PDF_BYTES} bytes")
     data = await file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Empty file")
+    if len(data) > MAX_PDF_BYTES:
+        raise HTTPException(status_code=413, detail=f"PDF exceeds {MAX_PDF_BYTES} bytes")
     try:
         result = pdf_bytes_to_md(data)
     except ValueError as e:
