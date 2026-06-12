@@ -5,6 +5,8 @@ import { nodeRegistry, RunContext, auditModelConfig } from '@cortexa/nodes';
 const REDIS_HOST = process.env.REDIS_HOST ?? 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6379);
 const API_URL = process.env.API_URL ?? 'http://localhost:3001/api';
+// One NVIDIA NIM key for every model (per-model env vars override if set)
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY ?? '';
 const WEBHOOK_SECRET = process.env.INTERNAL_WEBHOOK_SECRET ?? '';
 
 // T1-6: fail-closed — a worker without the shared secret can only produce
@@ -95,17 +97,20 @@ const worker = new Worker(
           // ── LocalStack S3 ─────────────────────────────────────────────────
           S3_ENDPOINT: process.env.S3_ENDPOINT || '',
           S3_BUCKET: process.env.S3_BUCKET || '',
-          // ── NVIDIA NIM — per-model keys ───────────────────────────────────
-          NVIDIA_LLM_KEY:      process.env.NVIDIA_LLM_KEY      || '',
-          NVIDIA_GLM_KEY:      process.env.NVIDIA_GLM_KEY      || '',
-          NVIDIA_VISION_KEY:   process.env.NVIDIA_VISION_KEY   || '',
-          NVIDIA_EMBED_KEY:    process.env.NVIDIA_EMBED_KEY    || '',
-          NVIDIA_BGE_KEY:      process.env.NVIDIA_BGE_KEY      || '',
-          NVIDIA_RERANK_KEY:   process.env.NVIDIA_RERANK_KEY   || '',
-          NVIDIA_PALIGEMMA_KEY:process.env.NVIDIA_PALIGEMMA_KEY|| '',
-          NVIDIA_OCR_KEY:      process.env.NVIDIA_OCR_KEY      || '',
-          NVIDIA_SAFETY_KEY:   process.env.NVIDIA_SAFETY_KEY   || '',
-          NVIDIA_IMAGE_KEY:    process.env.NVIDIA_IMAGE_KEY    || '',
+          // ── NVIDIA NIM keys ────────────────────────────────────────────────
+          // NIM uses ONE key for the whole integrate.api.nvidia.com endpoint.
+          // Set NVIDIA_API_KEY once → every slot inherits it. Per-model overrides
+          // still work if you ever want separate keys/quotas.
+          NVIDIA_LLM_KEY:      process.env.NVIDIA_LLM_KEY      || NVIDIA_API_KEY,
+          NVIDIA_GLM_KEY:      process.env.NVIDIA_GLM_KEY      || NVIDIA_API_KEY,
+          NVIDIA_VISION_KEY:   process.env.NVIDIA_VISION_KEY   || NVIDIA_API_KEY,
+          NVIDIA_EMBED_KEY:    process.env.NVIDIA_EMBED_KEY    || NVIDIA_API_KEY,
+          NVIDIA_BGE_KEY:      process.env.NVIDIA_BGE_KEY      || NVIDIA_API_KEY,
+          NVIDIA_RERANK_KEY:   process.env.NVIDIA_RERANK_KEY   || NVIDIA_API_KEY,
+          NVIDIA_PALIGEMMA_KEY:process.env.NVIDIA_PALIGEMMA_KEY|| NVIDIA_API_KEY,
+          NVIDIA_OCR_KEY:      process.env.NVIDIA_OCR_KEY      || NVIDIA_API_KEY,
+          NVIDIA_SAFETY_KEY:   process.env.NVIDIA_SAFETY_KEY   || NVIDIA_API_KEY,
+          NVIDIA_IMAGE_KEY:    process.env.NVIDIA_IMAGE_KEY    || NVIDIA_API_KEY,
           // ── Web Search ─────────────────────────────────────────────────────
           TAVILY_API_KEY:      process.env.TAVILY_API_KEY      || '',
           // ── Redis ──────────────────────────────────────────────────────────
