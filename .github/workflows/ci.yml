@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [v1, main]
+  pull_request:
+    branches: [v1, main]
+
+jobs:
+  typescript:
+    name: TypeScript (nodes · api · worker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build @cortexa/nodes (worker resolves its dist)
+        run: pnpm --filter @cortexa/nodes build
+      - name: Typecheck api
+        run: npx tsc --noEmit
+        working-directory: apps/api
+      - name: Typecheck worker
+        run: npx tsc --noEmit
+        working-directory: apps/worker
+
+  frontend:
+    name: Frontend (tsc + vite build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx tsc -p tsconfig.app.json --noEmit
+      - run: npx vite build
+
+  python:
+    name: ppt-worker (compile check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile all ppt-worker modules
+        run: python -m py_compile main.py pdf_to_md.py models_config.py slide_classifier.py presentation_engine.py presentation_engine_v2.py synthesis_engine.py normalizer.py validator.py renderer.py story_validator.py diagram_renderer.py
+        working-directory: apps/ppt-worker
+
+  secret-scan:
+    name: Secret scan (provider key patterns)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if any provider key pattern is tracked
+        run: |
+          if git grep -nE 'nvapi-[A-Za-z0-9_-]{20,}|gsk_[A-Za-z0-9]{20,}|hf_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}' -- ':!*.md'; then
+            echo "::error::Provider key pattern found in tracked files"
+            exit 1
+          fi
+          echo "No secrets found."

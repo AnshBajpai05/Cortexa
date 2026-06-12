@@ -122,7 +122,7 @@ export class RunsService {
         },
         {
           jobId: run.id, // T1-3: idempotent — BullMQ dedupes on jobId
-          attempts: 3,
+          attempts: 1, // §4.2: engine owns retries; reconciler covers crash-requeue
           backoff: { type: 'exponential', delay: 2000 },
           removeOnComplete: { count: 100 },
           removeOnFail: { count: 50 },
@@ -209,7 +209,9 @@ export class RunsService {
           const sourceField = edge.sourceHandle || 'value'; // Default to 'value' or 'text'
           
           console.log(`[resolveInputs] Mapping parent ${parentRun.nodeId}.${sourceField} -> child ${run.nodeId}.${targetField}`);
-          resolvedInputs[targetField] = outputs[sourceField] || outputs['text'] || outputs['value'];
+          // §4.5: ?? not || — legitimate falsy outputs (0, "", false) must not
+          // silently fall through to the wrong field.
+          resolvedInputs[targetField] = outputs[sourceField] ?? outputs['text'] ?? outputs['value'];
         } else {
           // Legacy behavior: merge all
           console.log(`[resolveInputs] Merging all outputs from parent ${parentRun.nodeId}`);
@@ -386,7 +388,7 @@ export class RunsService {
       },
       {
         jobId: newRun.id, // T1-3: idempotent
-        attempts: 3,
+        attempts: 1, // §4.2: engine owns retries
         backoff: { type: 'exponential', delay: 2000 }
       }
     );
@@ -470,7 +472,7 @@ export class RunsService {
             },
             {
               jobId: childRun.id, // T1-3: idempotent — duplicate joins dedupe here
-              attempts: 3,
+              attempts: 1, // §4.2: engine owns retries; reconciler covers crash-requeue
               backoff: { type: 'exponential', delay: 2000 },
             }
           );

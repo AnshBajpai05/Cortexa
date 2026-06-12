@@ -7,6 +7,13 @@ const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6379);
 const API_URL = process.env.API_URL ?? 'http://localhost:3001/api';
 const WEBHOOK_SECRET = process.env.INTERNAL_WEBHOOK_SECRET ?? '';
 
+// T1-6: fail-closed — a worker without the shared secret can only produce
+// rejected callbacks, which strands every run. Refuse to boot instead.
+if (!WEBHOOK_SECRET.trim()) {
+  console.error('FATAL: INTERNAL_WEBHOOK_SECRET is not set. Refusing to start (fail-closed).');
+  process.exit(1);
+}
+
 console.log(`🤖 Cortexa Worker starting [PID: ${process.pid}]... Connected to Redis at ${REDIS_HOST}:${REDIS_PORT}`);
 console.log(`📜 Registered nodes: ${Array.from(nodeRegistry.keys()).join(', ')}`);
 

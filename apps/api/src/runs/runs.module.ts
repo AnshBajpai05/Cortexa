@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { RunsController } from './runs.controller';
 import { RunsService } from './runs.service';
 import { RunEventsService } from './run-events.service';
+import { ReconcilerService } from './reconciler.service';
 import { WorkflowsModule } from '../workflows/workflows.module';
 
 @Module({
@@ -12,7 +13,7 @@ import { WorkflowsModule } from '../workflows/workflows.module';
     WorkflowsModule,
   ],
   controllers: [RunsController],
-  providers: [RunsService, RunEventsService],
+  providers: [RunsService, RunEventsService, ReconcilerService],
   exports: [RunsService, RunEventsService],
 })
 export class RunsModule {}

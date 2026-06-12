@@ -25,6 +25,18 @@ export class InternalController {
     private readonly runEvents: RunEventsService,
   ) {}
 
+  // ── T1-6: fail-closed secret check ─────────────────────────────────────────
+  // Previously `'' === ''` passed when env was unset on both sides → open API.
+  private assertInternalSecret(secret: string | undefined) {
+    const expected = process.env.INTERNAL_WEBHOOK_SECRET;
+    if (!expected || expected.trim() === '') {
+      throw new UnauthorizedException('INTERNAL_WEBHOOK_SECRET is not configured — internal API is fail-closed');
+    }
+    if (secret !== expected) {
+      throw new UnauthorizedException('Invalid internal webhook secret');
+    }
+  }
+
   // POST /api/internal/runs/:runId
   @Post('runs/:runId')
   async handleWorkerCallback(
@@ -32,10 +44,7 @@ export class InternalController {
     @Body() body: WorkerCallbackDto,
     @Headers('x-internal-secret') secret: string,
   ) {
-    // ── Authenticate the Worker ──────────────────────────────────────────────
-    if (secret !== process.env.INTERNAL_WEBHOOK_SECRET) {
-      throw new UnauthorizedException('Invalid internal webhook secret');
-    }
+    this.assertInternalSecret(secret);
 
     // ── Update and trigger downstream ────────────────────────────────────────
     const result = await this.runsService.completeRun(runId, body);
@@ -57,9 +66,7 @@ export class InternalController {
     },
     @Headers('x-internal-secret') secret: string,
   ) {
-    if (secret !== process.env.INTERNAL_WEBHOOK_SECRET) {
-      throw new UnauthorizedException('Invalid internal webhook secret');
-    }
+    this.assertInternalSecret(secret);
 
     const log = await this.prisma.runLog.create({
       data: {
@@ -72,6 +79,17 @@ export class InternalController {
         finishedAt: body.status !== 'started' ? new Date() : null,
       },
     });
+
+    // §4.5 fix: Run.status was never set to 'running' and startedAt was never
+    // populated (status jumped queued→completed). Wire it from the worker's
+    // 'started' log so polling, the reconciler TTL sweep, and latency metrics
+    // all have real data.
+    if (body.status === 'started') {
+      await this.prisma.run.updateMany({
+        where: { id: runId, status: 'queued' },
+        data: { status: 'running', startedAt: new Date() },
+      });
+    }
 
     // ── Publish to SSE subscribers (live canvas) ─────────────────────────────
     try {
