@@ -20,6 +20,9 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: apps/api
       - name: Build @cortexa/nodes (worker resolves its dist)
         run: pnpm --filter @cortexa/nodes build
       - name: Typecheck api
