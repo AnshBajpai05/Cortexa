@@ -5,8 +5,12 @@ import { nodeRegistry, RunContext, auditModelConfig } from '@cortexa/nodes';
 const REDIS_HOST = process.env.REDIS_HOST ?? 'localhost';
 const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6379);
 const API_URL = process.env.API_URL ?? 'http://localhost:3001/api';
-// One NVIDIA NIM key for every model (per-model env vars override if set)
-const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY ?? '';
+// One NVIDIA NIM key for every model (per-model env vars override if set).
+// NVIDIA_API_KEYS (plural, comma-separated) enables multi-account load balancing
+// in nvidiaPost; the single-key slots below default to the first pooled key.
+const NVIDIA_API_KEYS = (process.env.NVIDIA_API_KEYS ?? '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || NVIDIA_API_KEYS[0] || '';
 const WEBHOOK_SECRET = process.env.INTERNAL_WEBHOOK_SECRET ?? '';
 
 // T1-6: fail-closed — a worker without the shared secret can only produce

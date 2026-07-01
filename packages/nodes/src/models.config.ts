@@ -24,18 +24,21 @@ function env(key: string, fallback: string): string {
 
 export const MODELS = {
   // Heavy reasoning, evaluation, planning, QA — the "smartest" tier.
-  reasoning: env("CORTEXA_MODEL_REASONING", "moonshotai/kimi-k2-instruct"),
+  // 2026-07 catalog fix: moonshotai/kimi-k2-instruct reached EOL 2026-05-12
+  // (NIM returns 410 Gone). Swapped to qwen3-next-80b (live, ~1s, verified).
+  reasoning: env("CORTEXA_MODEL_REASONING", "qwen/qwen3-next-80b-a3b-instruct"),
 
   // Mid-tier reasoning / formatting / fast-structured work.
-  // Replaces the DEPRECATED meta/llama-3.1-70b-instruct.
-  reasoningMid: env("CORTEXA_MODEL_REASONING_MID", "meta/llama-3.3-70b-instruct"),
+  // 2026-07: dense meta/llama-3.3-70b timed out (>300s) and llama-3.1-70b took
+  // ~107s on long generations (free tier). Switched heavy roles to the MoE
+  // qwen3-next-80b (~3B active params → large but fast, verified live).
+  reasoningMid: env("CORTEXA_MODEL_REASONING_MID", "qwen/qwen3-next-80b-a3b-instruct"),
 
   // Agentic tool-use, routing, structured JSON.
-  agent: env("CORTEXA_MODEL_AGENT", "meta/llama-3.3-70b-instruct"),
+  agent: env("CORTEXA_MODEL_AGENT", "qwen/qwen3-next-80b-a3b-instruct"),
 
   // Deep strategic analyst (long, high-density reports).
-  // Replaces the DEPRECATED meta/llama-3.1-405b-instruct.
-  analyst: env("CORTEXA_MODEL_ANALYST", "meta/llama-3.3-70b-instruct"),
+  analyst: env("CORTEXA_MODEL_ANALYST", "qwen/qwen3-next-80b-a3b-instruct"),
 
   // Blazing-fast / cheap completions, classification, tight loops.
   fast: env("CORTEXA_MODEL_FAST", "meta/llama-3.1-8b-instruct"),
@@ -113,6 +116,14 @@ export function auditModelConfig(env: Record<string, string | undefined> = {}): 
   for (const [role, id] of Object.entries(MODELS)) {
     console.log(`  • ${role.padEnd(18)} → ${id}`);
   }
+  // Every per-model slot falls back to the single NVIDIA_API_KEY or, for
+  // multi-account load balancing, the first key of the NVIDIA_API_KEYS pool —
+  // mirror that here so the audit reflects what the runtime actually resolves.
+  const pool = (env.NVIDIA_API_KEYS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const fallback = env.NVIDIA_API_KEY || pool[0] || "";
+  if (pool.length > 1) {
+    console.log(`[models.config] NVIDIA key pool: ${pool.length} account keys (load-balanced).`);
+  }
   const keyVars = [
     "NVIDIA_LLM_KEY",
     "NVIDIA_GLM_KEY",
@@ -122,12 +133,14 @@ export function auditModelConfig(env: Record<string, string | undefined> = {}): 
     "NVIDIA_IMAGE_KEY",
   ];
   const missing = keyVars.filter((k) => {
-    const val = env[k];
+    const val = env[k] || fallback;
     return !val || val.startsWith("mock");
   });
   if (missing.length) {
     console.warn(
       `[models.config] ⚠️  MOCK MODE for: ${missing.join(", ")} — these calls will return fake output until real NVIDIA keys are set.`
     );
+  } else {
+    console.log("[models.config] ✅ Live keys resolved for all model slots.");
   }
 }

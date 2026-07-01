@@ -126,32 +126,65 @@ export class AgentGatewayService {
     return narrative;
   }
 
-  private async batchClassifyChunks(titles: string): Promise<string[]> {
+  // ── NVIDIA NIM key pool (multi-account load balancing + failover) ──────────
+  // Mirrors the worker's nvidiaPost pool so the gateway's planning calls — the
+  // first inference in every run — spread across accounts and survive a dead or
+  // rate-limited key instead of failing the whole run.
+  private static nimRr = 0;
+  private nimKeys(): string[] {
+    const pool = (process.env.NVIDIA_API_KEYS ?? '')
+      .split(',').map((s) => s.trim()).filter(Boolean);
+    const primary = process.env.NVIDIA_LLM_KEY || '';
+    const merged = [primary, ...pool.filter((k) => k && k !== primary)].filter(Boolean);
+    return merged.length ? merged : [primary];
+  }
+
+  /** POST /chat/completions, round-robining the key pool and failing over on 429/401/403. */
+  private async nimChat(body: Record<string, any>): Promise<any> {
     const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
-    const apiKey = process.env.NVIDIA_LLM_KEY || '';
+    const keys = this.nimKeys();
+    let lastErr: any;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[AgentGatewayService.nimRr++ % keys.length];
+      try {
+        const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const retriable = res.status === 429 || res.status === 401 || res.status === 403;
+          if (retriable && i < keys.length - 1) {
+            this.logger.warn(`[AgentGateway] NIM ${res.status} on key ${key.slice(0, 12)}… — failing over to next account key`);
+            lastErr = new Error(`NVIDIA API returned ${res.status}`);
+            continue;
+          }
+          throw new Error(`NVIDIA API returned ${res.status}`);
+        }
+        return await res.json();
+      } catch (e) {
+        lastErr = e;
+        if (i < keys.length - 1) continue;
+        throw e;
+      }
+    }
+    throw lastErr ?? new Error('NIM chat failed: no keys configured');
+  }
 
+  private async batchClassifyChunks(titles: string): Promise<string[]> {
     try {
-      const response = await fetch(`${NVIDIA_BASE}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: MODELS.fast,
-          messages: [
-            { 
-              role: 'system', 
-              content: `You are a classifier. Classify each numbered title into one of: [${PPT_CATEGORIES.join(', ')}]. 
-              Return a simple JSON array of strings corresponding to the titles in order.` 
-            },
-            { role: 'user', content: titles }
-          ],
-          temperature: 0.0,
-        }),
+      const data = await this.nimChat({
+        model: MODELS.fast,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a classifier. Classify each numbered title into one of: [${PPT_CATEGORIES.join(', ')}].
+              Return a simple JSON array of strings corresponding to the titles in order.`,
+          },
+          { role: 'user', content: titles },
+        ],
+        temperature: 0.0,
       });
-
-      const data = await response.json();
       const content = data.choices[0].message.content;
       
       // Hyper-robust extraction for the batch categories
@@ -170,9 +203,6 @@ export class AgentGatewayService {
 
   // ── Intent Classifier (Llama — fast/cheap) ────────────────────────────────
   async classifyIntent(prompt: string): Promise<IntentPlan> {
-    const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
-    const apiKey = process.env.NVIDIA_LLM_KEY || '';
-
     const systemPrompt = `You are an intent classifier for an AI pipeline system.
 Given a user prompt, classify it and return ONLY valid JSON.
 
@@ -200,29 +230,16 @@ Example:
     const classificationSnippet = prompt.length > 1000 ? prompt.slice(0, 500) + "..." + prompt.slice(-500) : prompt;
     this.logger.debug(`[AgentGateway] Classifying snippet: ${classificationSnippet.slice(0, 100)}...`);
 
-    const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODELS.fast,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: classificationSnippet },
-        ],
-        max_tokens: 300,
-        temperature: 0.0,
-        stream: false,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`NVIDIA API returned ${res.status}`);
-    }
-
-    const data = await res.json() as any;
+    const data = await this.nimChat({
+      model: MODELS.fast,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: classificationSnippet },
+      ],
+      max_tokens: 300,
+      temperature: 0.0,
+      stream: false,
+    }) as any;
     const rawText = data.choices?.[0]?.message?.content ?? '';
 
     // Extract JSON from response

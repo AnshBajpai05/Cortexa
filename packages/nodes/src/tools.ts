@@ -8,6 +8,28 @@ import { MODELS } from "./models.config";
 // ─── NVIDIA NIM base URL ─────────────────────────────────────────────────────
 const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
 
+// ─── NVIDIA key pool (multi-account load balancing) ──────────────────────────
+// Set NVIDIA_API_KEYS="key1,key2,..." to spread inference across several free-tier
+// accounts. nvidiaPost round-robins the base request across the pool and, on a
+// 429 (rate-limit) or 401/403 (dead/exhausted key), fails over to the next
+// account key instantly — backing off only after a full cycle of the pool.
+// When no pool is set it falls back to the single key the caller passed in, so
+// existing single-key behavior is unchanged.
+let _keyPool: string[] | null = null;
+function keyPool(): string[] {
+  if (_keyPool === null) {
+    _keyPool = (process.env.NVIDIA_API_KEYS ?? "")
+      .split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return _keyPool;
+}
+function poolFor(primaryKey: string): string[] {
+  const extra = keyPool().filter((k) => k && k !== primaryKey);
+  const pool = [primaryKey, ...extra].filter(Boolean);
+  return pool.length ? pool : [primaryKey];
+}
+let _rrCursor = 0;
+
 // ─── Model Profiles (Cost / Latency Awareness) ──────────────────────────────
 // Re-exported from the central config so the routing table and the profile
 // table can never drift apart again.
@@ -200,13 +222,20 @@ async function nvidiaPost<T = any>(
   maxRetries = 2
 ): Promise<T> {
   const url = `${NVIDIA_BASE}${endpoint}`;
-  let attempt = 0;
-  while (attempt <= maxRetries) {
-    console.log(`[nvidiaPost] POST ${url} | key=${apiKey.slice(0,12)}... | model=${(payload as any).model ?? 'N/A'} | attempt=${attempt}`);
+  const pool = poolFor(apiKey);
+  // Spread base load: each new request starts on a different account key.
+  let cursor = pool.length > 1 ? _rrCursor++ % pool.length : 0;
+  // Try every key at least once, then allow a couple of backoff cycles.
+  const maxAttempts = pool.length + maxRetries;
+  let backoffs = 0;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const key = pool[cursor % pool.length];
+    console.log(`[nvidiaPost] POST ${url} | key=${key.slice(0,12)}... | pool=${pool.length} | model=${(payload as any).model ?? 'N/A'} | attempt=${attempt}`);
     try {
       const response = await axios.post<T>(url, payload, {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
         },
         responseType,
@@ -217,20 +246,29 @@ async function nvidiaPost<T = any>(
     } catch (err: any) {
       const status = err.response?.status;
       const body = err.response?.data;
-      console.error(`[nvidiaPost] FAILED status=${status} | body=${JSON.stringify(body)?.slice(0,500)} | msg=${err.message}`);
-      
-      if (status === 429 && attempt < maxRetries) {
-        attempt++;
-        const waitMs = attempt * 10000; // Exponential backoff: 10s, 20s
-        console.warn(`[nvidiaPost] Hit 429 Rate Limit. Backing off for ${waitMs}ms before attempt ${attempt}...`);
-        await new Promise(r => setTimeout(r, waitMs));
+      console.error(`[nvidiaPost] FAILED status=${status} | key=${key.slice(0,12)}... | body=${JSON.stringify(body)?.slice(0,300)} | msg=${err.message}`);
+
+      // 429 = rate-limited; 401/403 = key rejected/quota-dead → try another account.
+      // Single-key auth failures still throw immediately (no other key to try).
+      const rotatable = status === 429 || ((status === 401 || status === 403) && pool.length > 1);
+      if (rotatable && attempt < maxAttempts - 1) {
+        cursor++; // fail over to the next account key
+        // Back off only once we've cycled through every key in the pool.
+        if ((attempt + 1) % pool.length === 0) {
+          backoffs++;
+          const waitMs = backoffs * 10000; // 10s, 20s, ...
+          console.warn(`[nvidiaPost] All ${pool.length} key(s) returned ${status}. Backing off ${waitMs}ms before retry cycle ${backoffs}...`);
+          await new Promise((r) => setTimeout(r, waitMs));
+        } else {
+          console.warn(`[nvidiaPost] ${status} on key ${key.slice(0,12)}... — failing over to next account key.`);
+        }
         continue;
       }
-      
+
       throw err;
     }
   }
-  throw new Error("nvidiaPost max retries exceeded");
+  throw new Error("nvidiaPost: key pool exhausted / max retries exceeded");
 }
 
 // ─── Structured Output Helper ─────────────────────────────────────────────────
@@ -426,17 +464,26 @@ export const tools = {
     }
 
     const model = options.model || MODELS.rerank;
-    const data = await nvidiaPost<any>("/ranking", apiKey, {
-      model,
-      query: { text: query },
-      passages: passages.map((p) => ({ text: p })),
-      truncate: "END",
-    });
+    try {
+      const data = await nvidiaPost<any>("/ranking", apiKey, {
+        model,
+        query: { text: query },
+        passages: passages.map((p) => ({ text: p })),
+        truncate: "END",
+      });
 
-    const results: { index: number; relevance_score: number }[] = data.rankings;
-    const final = options.topN ? results.slice(0, options.topN) : results;
-    await setCached(ctx, cacheKey, final, 3600 * 24);
-    return final;
+      const results: { index: number; relevance_score: number }[] = data.rankings;
+      const final = options.topN ? results.slice(0, options.topN) : results;
+      await setCached(ctx, cacheKey, final, 3600 * 24);
+      return final;
+    } catch (err: any) {
+      // Reranker model unavailable (e.g. NIM catalog deprecation) — degrade to
+      // retrieval order rather than failing the whole grounding pipeline.
+      const status = err?.response?.status ?? err?.message;
+      console.warn(`[tools.rerank] rerank model '${model}' failed (${status}) — degrading to retrieval order.`);
+      const identity = passages.map((_, i) => ({ index: i, relevance_score: 0.5 }));
+      return options.topN ? identity.slice(0, options.topN) : identity;
+    }
   },
 
   // ─── Vision / VLM ────────────────────────────────────────────────────────
